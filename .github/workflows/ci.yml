@@ -1,0 +1,59 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# A new push to the same branch makes the previous run obsolete.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  analyze-and-test:
+    name: Analyze & Test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: 3.44.2
+          channel: stable
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      # pubspec.yaml declares `.env` as an asset, but the file is gitignored.
+      # Without this step every later command dies with
+      # "Error: Failed to build asset bundle".
+      # The value is only an API base URL, so the fallback keeps forks and
+      # secret-less repositories working.
+      - name: Create .env
+        run: |
+          echo "APP_API_BASE_URL=${{ secrets.APP_API_BASE_URL || 'https://dummyjson.com' }}" > .env
+
+      # Freezed, json_serializable and Retrofit output is gitignored, so nothing
+      # in the project compiles until this has run. It must come before both
+      # analyze and test.
+      - name: Generate code
+        run: dart run build_runner build --delete-conflicting-outputs
+
+      # Only hand-written sources are checked. Generated files are formatted by
+      # their builders and are not ours to keep tidy.
+      - name: Verify formatting
+        run: |
+          dart format --output=none --set-exit-if-changed \
+            $(find lib test -name '*.dart' ! -name '*.g.dart' ! -name '*.freezed.dart')
+
+      - name: Analyze
+        run: flutter analyze
+
+      - name: Run tests
+        run: flutter test
