@@ -6,7 +6,7 @@ plugins {
 
 android {
     namespace = "com.rfebrr.auth_katalog_app"
-    compileSdk = flutter.compileSdkVersion
+    compileSdk = 37
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
