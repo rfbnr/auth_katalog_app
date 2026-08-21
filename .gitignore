@@ -45,3 +45,8 @@ app.*.map.json
 /android/app/release
 
 .env
+
+# Code generation output (freezed, json_serializable, retrofit).
+# Run `dart run build_runner build` after cloning.
+*.g.dart
+*.freezed.dart
